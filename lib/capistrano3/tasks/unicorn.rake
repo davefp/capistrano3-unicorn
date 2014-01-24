@@ -5,7 +5,14 @@ namespace :load do
     set :unicorn_restart_sleep_time, 3
     set :unicorn_roles, -> { :app }
     set :unicorn_options, -> { '' }
-    set :unicorn_rack_env, -> { fetch(:rails_env) == 'development' ? 'development' : 'deployment' }
+    set :unicorn_rails, -> { false }
+    set :unicorn_env, -> {
+      if fetch(:unicorn_rails)
+        fetch(:rails_env)
+      else
+        fetch(:rails_env) == 'development' ? 'development' : 'deployment'
+      end
+    }
   end
 end
 
@@ -18,7 +25,7 @@ namespace :unicorn do
           if test("[ -e #{fetch(:unicorn_pid)} ] && kill -0 #{pid}")
             info "unicorn is running..."
           else
-            execute :bundle, "exec unicorn", "-c", fetch(:unicorn_config_path), "-E", fetch(:unicorn_rack_env), "-D", fetch(:unicorn_options)
+            execute :bundle, "exec #{unicorn_executable}", "-c", fetch(:unicorn_config_path), "-E", fetch(:unicorn_env), "-D", fetch(:unicorn_options)
           end
         end
       end
@@ -97,4 +104,12 @@ end
 
 def pid_oldbin
   "`cat #{fetch(:unicorn_pid)}.oldbin`"
+end
+
+def unicorn_executable
+  if fetch(:unicorn_rails)
+    "unicorn_rails"
+  else
+    "unicorn"
+  end
 end
